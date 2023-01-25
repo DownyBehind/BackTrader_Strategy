@@ -3,11 +3,11 @@ import yfinance as yf
 
 class MultiIndicatorStrategy(bt.Strategy):
     params = (
-        ('sma1_period', 12),
-        ('sma2_period', 20),
-        ('rsi_period', 14),
-        ('rsi_oversold', 30),
-        ('rsi_overbought', 70),
+        ('sma1_period', 20),
+        ('sma2_period', 50),
+        ('rsi_period', 7),
+        ('rsi_oversold', 40),
+        ('rsi_overbought', 60),
     )
 
     def __init__(self):
@@ -27,7 +27,7 @@ class MultiIndicatorStrategy(bt.Strategy):
 
 cerebro = bt.Cerebro()
 
-data = bt.feeds.PandasData(dataname= yf.download('TSLA','2021-01-01','2021-12-31'))
+data = bt.feeds.PandasData(dataname= yf.download('TSLA','2018-01-01','2021-12-31'))
 cerebro.adddata(data)
 
 cerebro.addstrategy(MultiIndicatorStrategy)
