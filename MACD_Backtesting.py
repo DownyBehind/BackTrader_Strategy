@@ -1,40 +1,44 @@
-import backtesting as Backtesting
+import pandas as pd
 import yfinance as yf
+from backtesting import Backtest, Strategy
+from backtesting.lib import crossover
+from backtesting.test import SMA
 
-# Define MACD Strategy
-class MACDStrategy(Backtesting.Strategy):
-    
-    # Define parameters
-    params = (("fast", 12), ("slow", 26), ("signal", 9))
+class MACDStrategy(Strategy):
+    params = (
+        ('fast', 12),
+        ('slow', 26),
+        ('signal', 9),
+    )
 
     def init(self):
-        # Calculate MACD and Signal line
-        macd, signal = self.I(macd, self.data.Close, self.params[0], self.params[1], self.params[2])
-        self.macd = macd
-        self.signal = signal
-        
+        close = pd.Series(self.data.Close)
+        macd, signal = self.macd(close, fast = int(self.params[0][1]), slow = int(self.params[1][1]), signal = int(self.params[2][1]))
+        self.macd_diff = self.I(macd - signal)
+
     def next(self):
-        # Buy signal when MACD crosses above Signal line
-        if self.macd[0] > self.signal[0] and self.macd[-1] <= self.signal[-1]:
+        if self.macd_diff.crossed_above(0):
             self.buy()
-        # Sell signal when MACD crosses below Signal line
-        elif self.macd[0] < self.signal[0] and self.macd[-1] >= self.signal[-1]:
+        elif self.macd_diff.crossed_below(0):
             self.sell()
 
-# Define custom MACD function
-def macd(close, fast, slow, signal):
-    ema_fast = close.ewm(span=fast, adjust=False).mean()
-    ema_slow = close.ewm(span=slow, adjust=False).mean()
-    macd = ema_fast - ema_slow
-    signal_line = macd.ewm(span=signal, adjust=False).mean()
-    return macd, signal_line
+    def macd(self, close, fast, slow, signal):
+        exp1 = close.ewm(span=fast, adjust=False).mean()
+        exp2 = close.ewm(span=slow, adjust=False).mean()
+        macd = exp1 - exp2
+        signal = macd.ewm(span=signal, adjust=False).mean()
+        return macd, signal
 
-# Download Yahoo Finance data
-data = yf.download("AAPL", start="2010-01-01", end="2022-02-14")
+# Download stock data from Yahoo Finance
+ticker = "AAPL"
+data = yf.download(ticker, start="2020-01-01", end="2021-12-31")
 
-# Create Backtesting object with MACD strategy
-bt = Backtesting.Backtest(data, MACDStrategy, cash=10000, commission=0.001)
+# Initialize the backtest
+bt = Backtest(data, MACDStrategy, cash=10000, commission=.002, exclusive_orders=True)
 
-# Run backtesting and print results
+# Run the backtest and print the results
 results = bt.run()
 print(results)
+
+# Plot the backtest results
+bt.plot()
